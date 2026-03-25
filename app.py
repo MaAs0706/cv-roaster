@@ -1,11 +1,11 @@
 import streamlit as st
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 import os
 import pdfplumber
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 st.set_page_config(page_title="CV Roaster", page_icon="🔥", layout="centered")
 
@@ -29,13 +29,17 @@ if roast:
             else:
                 cv_text = uploaded_file.read().decode("utf-8")
 
-            model = genai.GenerativeModel("gemini-1.5-flash-8b")
-            response = model.generate_content(
-                f"""You are a brutally honest senior tech recruiter with 20 years of experience. 
-                Roast the given resume — be funny, harsh, and specific about what's weak. 
-                But end with 3 genuine actionable improvements.
-                
-                Resume:
-                {cv_text}"""
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a brutally honest senior tech recruiter with 20 years of experience. Roast the given resume — be funny, harsh, and specific about what's weak. But end with 3 genuine actionable improvements."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Roast this resume:\n\n{cv_text}"
+                    }
+                ]
             )
-            st.markdown(response.text)
+            st.markdown(response.choices[0].message.content)
